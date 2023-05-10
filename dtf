@@ -1,0 +1,116 @@
+#!/usr/bin/python3
+"""
+Execute Python or bash code embedded in document (rst, generic file # commented) and embed the output
+(c) Olivier Friard 2023
+"""
+
+import sys
+import pathlib as pl
+import subprocess
+from io import StringIO
+
+if len(sys.argv) < 2:
+    print("No file found!")
+    sys.exit()
+
+if not pl.Path(sys.argv[1]).is_file():
+    print("File not found!")
+    sys.exit()
+
+
+if ".rst" in sys.argv[1]:
+    mode = "rst"
+else:
+    mode = "#"
+
+with open(sys.argv[1], "r") as f_in:
+    content = f_in.readlines()
+
+# extract chunks of code with their tacode[tag]gs
+code: dict = {}
+lang: dict = {}
+for idx, line in enumerate(content):
+    if (mode == "rst" and "..  BEGIN_CODE" in line) or (mode == "#" and "# BEGIN_CODE" in line):
+        # READ TAG
+        if not "TAG=" in line:
+            print(f"Error: no tag found in code block: {line}")
+            sys.exit(1)
+        tag = line.split("TAG=")[1].split(" ")[0].strip()
+        # read language
+        if not "LANG=" in line:
+            print(f"Error: no LANG found in code block: {line}")
+            sys.exit(1)
+        lang[tag] = line.split("LANG=")[1].split(" ")[0].strip().lower()
+
+        idx2 = idx + 1
+        code[tag] = ""
+        while True:
+            if mode == "rst":
+                code[tag] += content[idx2][4:]
+            if mode == "#":
+                code[tag] += content[idx2][1:]
+            idx2 += 1
+            if (mode == "rst" and "..  END_CODE" in content[idx2]) or (mode == "#" and "# END_CODE" in content[idx2]):
+                break
+
+# print(f"{code=} {lang=}")
+
+# run embedded chunks of code
+out: dict = {}
+for tag in code:
+    if lang[tag] == "python":
+        old_stdout = sys.stdout
+        redirected_output = sys.stdout = StringIO()
+        exec(code[tag])
+        sys.stdout = old_stdout
+        out[tag] = redirected_output.getvalue()
+    if lang[tag] == "bash":
+        out[tag] = subprocess.getoutput([code[tag]])
+
+
+# print(f"{out=}")
+
+# check output rows to delete
+rows_to_delete = []
+flag_del = False
+for idx, line in enumerate(content):
+    if (mode == "rst" and ".. END_OUTPUT" in line) or (mode == "#" and "# END_OUTPUT" in line):
+        flag_del = False
+    if flag_del:
+        rows_to_delete.append(idx)
+    if (mode == "rst" and ".. BEGIN_OUTPUT" in line) or (mode == "#" and "# BEGIN_OUTPUT" in line):
+        flag_del = True
+
+
+# print(rows_to_delete)
+
+# insert output in source file
+new_content = ""
+for idx, line in enumerate(content):
+    if idx in rows_to_delete:
+        continue
+    new_content += line
+    if (mode == "rst" and ".. BEGIN_OUTPUT" in line) or (mode == "#" and "# BEGIN_OUTPUT" in line):
+        if not "TAG=" in line:
+            print(f"Error: no tag found in output block: {line}")
+            sys.exit(1)
+        tag = line.split("TAG=")[1].split(" ")[0].strip()
+
+        if tag not in code:
+            print(f"Error: no code block corresponfing to tag {tag}")
+            sys.exit(1)
+
+        if mode == "rst":
+            new_content += "\n"
+            for line_out in out[tag].strip().split("\n"):
+                new_content += f"| {line_out}\n"
+            new_content += "\n"
+
+        if mode == "#":
+            for line_out in out[tag].strip().split("\n"):
+                new_content += line_out + "\n"
+
+
+# save modified source file
+with open(sys.argv[1], "w") as f_out:
+    f_out.write(new_content)
