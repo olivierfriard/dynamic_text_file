@@ -8,3 +8,4 @@ See the examples for details:
 `reStructuredText file example code <https://github.com/olivierfriard/dynamic_text_file/blob/main/example.rst?plain=1>`_
 
 
+Please note that running code from unknown authors may be dangerous. Run only your own code!
