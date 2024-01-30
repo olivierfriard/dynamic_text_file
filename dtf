@@ -5,7 +5,7 @@ Execute Python or bash code embedded in document (rst, generic file # commented)
 """
 
 import sys
-import pathlib as pl
+import pathlib as Path
 import subprocess
 from io import StringIO
 
@@ -13,7 +13,7 @@ if len(sys.argv) < 2:
     print("No file found!")
     sys.exit()
 
-if not pl.Path(sys.argv[1]).is_file():
+if not Path(sys.argv[1]).is_file():
     print("File not found!")
     sys.exit()
 
@@ -32,12 +32,12 @@ lang: dict = {}
 for idx, line in enumerate(content):
     if (mode == "rst" and "..  BEGIN_CODE" in line) or (mode == "#" and "# BEGIN_CODE" in line):
         # READ TAG
-        if not "TAG=" in line:
+        if "TAG=" not in line:
             print(f"Error: no tag found in code block: {line}")
             sys.exit(1)
         tag = line.split("TAG=")[1].split(" ")[0].strip()
         # read language
-        if not "LANG=" in line:
+        if "LANG=" not in line:
             print(f"Error: no LANG found in code block: {line}")
             sys.exit(1)
         lang[tag] = line.split("LANG=")[1].split(" ")[0].strip().lower()
@@ -91,13 +91,13 @@ for idx, line in enumerate(content):
         continue
     new_content += line
     if (mode == "rst" and ".. BEGIN_OUTPUT" in line) or (mode == "#" and "# BEGIN_OUTPUT" in line):
-        if not "TAG=" in line:
+        if "TAG=" not in line:
             print(f"Error: no tag found in output block: {line}")
             sys.exit(1)
         tag = line.split("TAG=")[1].split(" ")[0].strip()
 
         if tag not in code:
-            print(f"Error: no code block corresponfing to tag {tag}")
+            print(f"Error: no code block corresponfing to tag {tag}", file=sys.stderr)
             sys.exit(1)
 
         if mode == "rst":
