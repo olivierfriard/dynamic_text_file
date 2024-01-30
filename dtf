@@ -5,7 +5,18 @@ The files can be:
 - reSTructured files (rst)
 - generic file with # comment
 
-The output of execution is embed in the output
+The output of execution is embed in the input file between the corresponding tag
+
+example:
+
+# BEGIN_CODE TAG=hello LANG=python
+#print('Hello world!')
+# END_CODE
+
+# BEGIN_OUTPUT TAG=hello
+Hello world!
+# END_OUTPUT
+
 
 (c) Olivier Friard 2023-2024
 """
