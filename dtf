@@ -22,7 +22,7 @@ Hello world!
 """
 
 import sys
-import pathlib as Path
+from pathlib import Path
 import subprocess
 from io import StringIO
 
